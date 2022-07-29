@@ -1,4 +1,4 @@
-publish_rate: 30  # [Hz]
+publish_rate: 200  # [Hz]
 default_speed: 0.1  # [m/s]
 default_grasp_epsilon:
   inner: 0.005 # [m]

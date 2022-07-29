@@ -1,0 +1,3 @@
+geometry_msgs/PoseStamped pose_command
+sensor_msgs/JointState joint_command
+std_msgs/String controller_type

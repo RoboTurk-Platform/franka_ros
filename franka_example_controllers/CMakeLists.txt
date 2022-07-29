@@ -20,6 +20,9 @@ find_package(catkin REQUIRED COMPONENTS
   realtime_tools
   roscpp
   rospy
+  std_msgs
+  geometry_msgs
+  sensor_msgs
 )
 
 find_package(Eigen3 REQUIRED)
@@ -30,9 +33,15 @@ endif()
 
 add_message_files(FILES
   JointTorqueComparison.msg
+  MultiControllerCommand.msg
 )
 
-generate_messages()
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+  sensor_msgs
+)
 
 generate_dynamic_reconfigure_options(
   cfg/compliance_param.cfg

@@ -155,11 +155,6 @@ namespace franka_control {
 bool FrankaStateController::init(hardware_interface::RobotHW* robot_hardware,
                                  ros::NodeHandle& root_node_handle,
                                  ros::NodeHandle& controller_node_handle) {
-  franka_state_interface_ = robot_hardware->get<franka_hw::FrankaStateInterface>();
-  if (franka_state_interface_ == nullptr) {
-    ROS_ERROR("FrankaStateController: Could not get Franka state interface from hardware");
-    return false;
-  }
   if (!controller_node_handle.getParam("arm_id", arm_id_)) {
     ROS_ERROR("FrankaStateController: Could not get parameter arm_id");
     return false;
@@ -179,12 +174,35 @@ bool FrankaStateController::init(hardware_interface::RobotHW* robot_hardware,
     return false;
   }
 
+  franka_state_interface_ = robot_hardware->get<franka_hw::FrankaStateInterface>();
+  if (franka_state_interface_ == nullptr) {
+    ROS_ERROR("FrankaStateController: Could not get Franka state interface from hardware");
+    return false;
+  }
+
   try {
     franka_state_handle_ = std::make_unique<franka_hw::FrankaStateHandle>(
         franka_state_interface_->getHandle(arm_id_ + "_robot"));
   } catch (const hardware_interface::HardwareInterfaceException& ex) {
     ROS_ERROR_STREAM("FrankaStateController: Exception getting franka state handle: " << ex.what());
     return false;
+  }
+
+  auto* model_interface = robot_hardware->get<franka_hw::FrankaModelInterface>();
+  if (model_interface == nullptr) {
+    ROS_ERROR_STREAM(
+      "FrankaStateController: Error getting model interface from hardware");
+    return false;
+  }
+
+  try {
+    model_handle_ = std::make_unique<franka_hw::FrankaModelHandle>(
+       model_interface->getHandle(arm_id_ + "_model"));
+  } catch (hardware_interface::HardwareInterfaceException& ex) {
+    ROS_ERROR_STREAM(
+         "FrankaStateController: Exception getting model handle from interface: "
+         << ex.what());
+     return false;
   }
 
   publisher_transforms_.init(root_node_handle, "/tf", 1);
@@ -260,6 +278,12 @@ void FrankaStateController::update(const ros::Time& time, const ros::Duration& /
 }
 
 void FrankaStateController::publishFrankaStates(const ros::Time& time) {
+  std::array<double, 42> O_Jac_EE = model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+
+  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(O_Jac_EE.data());
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> dq(robot_state_.dq.data());
+  Eigen::Matrix<double, 6, 1> ee_vel = jacobian * dq;
+
   if (publisher_franka_states_.trylock()) {
     static_assert(
         sizeof(robot_state_.cartesian_collision) == sizeof(robot_state_.cartesian_contact),
@@ -322,6 +346,8 @@ void FrankaStateController::publishFrankaStates(const ros::Time& time) {
       publisher_franka_states_.msg_.joint_collision[i] = robot_state_.joint_collision[i];
       publisher_franka_states_.msg_.joint_contact[i] = robot_state_.joint_contact[i];
       publisher_franka_states_.msg_.tau_ext_hat_filtered[i] = robot_state_.tau_ext_hat_filtered[i];
+      // ADDED: end effector velocity
+      publisher_franka_states_.msg_.EE_VEL[i] = ee_vel[i];
     }
 
     static_assert(sizeof(robot_state_.elbow) == sizeof(robot_state_.elbow_d),
