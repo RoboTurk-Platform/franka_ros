@@ -19,7 +19,6 @@
   <node pkg="tf" type="static_transform_publisher" name="base_to_link0" args="0 0 0 0 0 0 1 base panda_link0 100" />                                                                      
   <node pkg="tf" type="static_transform_publisher" name="world_to_base" args="0 0 0 0 0 0 1 world base 100" />                                                                      
 <include file="$(find panda_moveit_config)/launch/move_group.launch">
-  <arg name="fake_execution" value="false" />
   <arg name="load_gripper" value="$(arg load_gripper)" />
   <arg name="info" value="true" />
 </include>

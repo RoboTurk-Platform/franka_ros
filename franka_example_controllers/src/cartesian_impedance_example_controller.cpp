@@ -479,7 +479,7 @@ void CartesianImpedanceExampleController::update(const ros::Time& /*time*/,
   } else if (use_joint_velocity_) {
     // ADDED: interpolation in joint velocity targets from the ones coming in over ROS
     q_velocity_d_ = filter_params_ * q_velocity_d_target_ + (1.0 - filter_params_) * q_velocity_d_;
-
+  }
   // THEIR CODE
   // // compute error to desired pose
   // // position error
